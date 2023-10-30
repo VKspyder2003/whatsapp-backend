@@ -25,7 +25,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: 'https://whatsapp-frontend-mu.vercel.app/',
+        origin: 'https://whatsapp-frontend-mu.vercel.app',
     },
 });
 
