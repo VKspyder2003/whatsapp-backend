@@ -14,7 +14,7 @@ const app = express();
 
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://whatsapp-frontend-mu.vercel.app'
+  'https://vishwas-frontend-whats.netlify.app'
 ];
 
 app.use(cors({
