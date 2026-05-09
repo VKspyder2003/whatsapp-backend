@@ -2,12 +2,10 @@ const mongoose = require('mongoose')
 
 const userSchema = new mongoose.Schema({
     aud: {
-        type: String,
-        required: true
+        type: String
     },
     azp: {
-        type: String,
-        required: true
+        type: String
     },
     email: {
         type: String,
@@ -15,47 +13,52 @@ const userSchema = new mongoose.Schema({
     },
     email_verified: {
         type: Boolean,
-        required: true
+        default: false
     },
     exp: {
-        type: Number,
-        required: true
+        type: Number
     },
     family_name: {
         type: String,
-        required: true
+        default: ''
     },
     given_name: {
         type: String,
-        required: true
+        default: ''
     },
     iat: {
-        type: Number,
-        required: true
+        type: Number
     },
     iss: {
-        type: String,
-        required: true
+        type: String
     },
     jti: {
-        type: String,
-        required: true
+        type: String
     },
     name: {
         type: String,
         required: true
     },
     nbf: {
-        type: Number,
-        required: true
+        type: Number
     },
     picture: {
         type: String,
-        required: true
+        default: ''
     },
     sub: {
         type: String,
-        required: true
+        required: true,
+        unique: true
+    },
+    about: {
+        type: String,
+        default: ''
+    },
+    joinedAt: {
+        type: Date,
+        default: Date.now,
+        immutable: true
     }
 })
 

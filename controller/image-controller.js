@@ -1,7 +1,7 @@
 const grid = require('gridfs-stream')
 const mongoose = require('mongoose')
 
-const url = 'https://whatsapp-backend-x71u.onrender.com';
+const url = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 8000}`;
 
 
 let gfs, gridfsBucket;
@@ -27,6 +27,9 @@ const uploadImage = (request, response) => {
 const getImage = async (request, response) => {
     try {
         const file = await gfs.files.findOne({ filename: request.params.filename });
+        if (!file) {
+            return response.status(404).json({ msg: 'File not found' });
+        }
         const readStream = gridfsBucket.openDownloadStream(file._id);
         readStream.pipe(response);
     } catch (error) {

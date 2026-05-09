@@ -5,31 +5,38 @@ const bodyParser = require('body-parser');
 const http = require('http');
 const { Server } = require('socket.io');
 
-const Route = require('./routes/route');
-const Connection = require('./database/db');
-
 dotenv.config();
 
-const username = process.env.DB_USERNAME;
-const password = process.env.DB_PASSWORD;
+const Route = require('./routes/route');
+const { Connection } = require('./database/db');
 
 const app = express();
-app.use(cors());
+
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://whatsapp-frontend-mu.vercel.app'
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 app.use(bodyParser.json({ extended: true }));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/', Route);
 
-Connection(username, password);
+Connection();
 
 const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: 'https://whatsapp-frontend-mu.vercel.app',
+        origin: allowedOrigins,
     },
 });
 
 let users = [];
+const incognitoConversations = new Map();
 
 const addUser = (userData, socketId) => {
     !users.some(user => user.sub === userData.sub) && users.push({ ...userData, socketId });
@@ -41,6 +48,20 @@ const removeUser = (socketId) => {
 
 const getUser = (userId) => {
     return users.find(user => user.sub === userId);
+}
+
+const getConversationKey = (senderId, receiverId) => {
+    return [senderId, receiverId].sort().join(':');
+}
+
+const emitToParticipants = (participantIds, event, payload) => {
+    participantIds.forEach((participantId) => {
+        const user = getUser(participantId);
+
+        if (user?.socketId) {
+            io.to(user.socketId).emit(event, payload);
+        }
+    });
 }
 
 io.on('connection', (socket) => {
@@ -59,13 +80,37 @@ io.on('connection', (socket) => {
             io.to(user.socketId).emit('getMessage', data)
     })
 
-    // Toggle incognito mode
-    socket.on('setIncognito', (data, incognitoState) => {
-        const newIncognitoState = incognitoState;
-        const user = getUser(data.receiverId);
-        if (user) {
-            io.to(user.socketId).emit('getIncognito', newIncognitoState);
+    socket.on('getIncognitoState', ({ senderId, receiverId }) => {
+        if (!senderId || !receiverId) return;
+
+        const participants = [senderId, receiverId];
+        const key = getConversationKey(senderId, receiverId);
+
+        socket.emit('incognitoUpdated', {
+            participants,
+            isIncognito: Boolean(incognitoConversations.get(key))
+        });
+    });
+
+    // Toggle incognito mode for both participants.
+    socket.on('setIncognito', ({ senderId, receiverId, isIncognito }) => {
+        if (!senderId || !receiverId) return;
+
+        const participants = [senderId, receiverId];
+        const key = getConversationKey(senderId, receiverId);
+        const nextIncognitoState = Boolean(isIncognito);
+
+        if (nextIncognitoState) {
+            incognitoConversations.set(key, true);
+        } else {
+            incognitoConversations.delete(key);
         }
+
+        emitToParticipants(participants, 'incognitoUpdated', {
+            participants,
+            isIncognito: nextIncognitoState,
+            changedBy: senderId
+        });
     });
 
     // Disconnect
